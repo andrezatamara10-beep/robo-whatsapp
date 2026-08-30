@@ -4,7 +4,7 @@ const usuarios = {};
 // CONFIGURAÇÃO: Digite aqui o número do WhatsApp que vai virar o robô
 // Formato: Código do País + DDD + Número (Tudo junto, sem espaços ou traços)
 // Exemplo para o número (11) 99999-9999: '5511999999999'
-const NUMERO_DO_ROBO = '5531993243867'; 
+const NUMERO_DO_ROBO = '553193243867'; 
 
 async function conectarWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('sessao_whatsapp');
