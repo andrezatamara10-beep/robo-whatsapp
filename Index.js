@@ -1,32 +1,43 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const qrcode = require('qrcode-terminal');
-
 const usuarios = {};
+
+// CONFIGURAÇÃO: Digite aqui o número do WhatsApp que vai virar o robô
+// Formato: Código do País + DDD + Número (Tudo junto, sem espaços ou traços)
+// Exemplo para o número (11) 99999-9999: '5511999999999'
+const NUMERO_DO_ROBO = '5531993243867'; 
 
 async function conectarWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('sessao_whatsapp');
 
     const sock = makeWASocket({
         auth: state,
-        printQRInTerminal: false
+        printQRInTerminal: false,
+        browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
     sock.ev.on('creds.update', saveCreds);
 
+    // Se ainda não estiver conectado, solicita o código de texto de 8 dígitos
+    if (!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                let codigo = await sock.requestPairingCode(NUMERO_DO_ROBO);
+                console.log('🔑 CÓDIGO DE CONEXÃO GERADO: ' + codigo);
+                console.log('👉 No seu WhatsApp, vá em: Aparelhos Conectados > Conectar com número de telefone e digite o código acima.');
+            } catch (err) {
+                console.log('❌ Erro ao gerar código de pareamento: ', err);
+            }
+        }, 5000);
+    }
+
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        
-        if (qr) {
-            console.log('🤖 QR CODE DETECTADO! Escaneie o código abaixo com o seu WhatsApp:');
-            qrcode.generate(qr, { small: true });
-        }
+        const { connection, lastDisconnect } = update;
 
         if (connection === 'close') {
             const deveriaReconectar = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('🔄 Conexão fechada. Tentando reconectar...', deveriaReconectar);
             if (deveriaReconectar) conectarWhatsApp();
         } else if (connection === 'open') {
-            console.log('🚀 O Robô está online e pronto na Nuvem com Baileys!');
+            console.log('🚀 O Robô está online e pronto na Nuvem!');
         }
     });
 
@@ -37,13 +48,9 @@ async function conectarWhatsApp() {
         const de = msg.key.remoteJid;
         const texto = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').trim();
 
-        // Ignora grupos
         if (de.endsWith('@g.us')) return;
 
-        if (!usuarios[de]) {
-            usuarios[de] = { etapa: 'menu' };
-        }
-
+        if (!usuarios[de]) usuarios[de] = { etapa: 'menu' };
         const estado = usuarios[de];
 
         const enviarTexto = async (txt) => {
@@ -62,7 +69,6 @@ async function conectarWhatsApp() {
 
         if (estado.etapa === 'agendamento_dia') {
             const dias = { '1': 'Segunda-feira', '2': 'Terça-feira', '3': 'Quarta-feira', '4': 'Quinta-feira', '5': 'Sexta-feira' };
-            
             if (dias[texto]) {
                 estado.diaEscolhido = dias[texto];
                 estado.etapa = 'agendamento_hora';
@@ -75,7 +81,6 @@ async function conectarWhatsApp() {
 
         if (estado.etapa === 'agendamento_hora') {
             const horas = { '1': '09:00', '2': '14:00', '3': '16:00' };
-
             if (horas[texto]) {
                 estado.horaEscolhida = horas[texto];
                 await enviarTexto(`✅ *Agendamento Confirmado!*\n\n📅 Dia: ${estado.diaEscolhido}\n⏰ Horário: ${estado.horaEscolhida}\n\nMuito obrigado! Caso precise alterar, entre em contato com o suporte.`);
