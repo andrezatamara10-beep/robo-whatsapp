@@ -2,9 +2,9 @@
   "name": "robo-whatsapp",
   "version": "1.0.0",
   "description": "Robo de WhatsApp na Nuvem",
-  "main": "index.js",
+  "main": "Index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node Index.js"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.26.0",
