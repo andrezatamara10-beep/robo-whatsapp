@@ -1,33 +1,35 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const usuarios = {};
 
-// CONFIGURAÇÃO: Digite aqui o número do WhatsApp que vai virar o robô
-// Formato: Código do País + DDD + Número (Tudo junto, sem espaços ou traços)
-// Exemplo para o número (11) 99999-9999: '5511999999999'
-const NUMERO_DO_ROBO = '553193243867'; 
+// CONFIGURAÇÃO DO SEU NÚMERO (Sem o sinal de +, apenas números)
+const NUMERO_DIGITADO = '5531993243867'; 
 
 async function conectarWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('sessao_whatsapp');
 
+    // Remove espaços ou símbolos caso você digite sem querer
+    let numeroLimpo = NUMERO_DIGITADO.replace(/\D/g, '');
+
     const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        browser: ["Ubuntu", "Chrome", "20.0.04"]
+        browser: ["Chrome (Linux)", "Chrome", "114.0.0.0"]
     });
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Se ainda não estiver conectado, solicita o código de texto de 8 dígitos
     if (!sock.authState.creds.registered) {
         setTimeout(async () => {
             try {
-                let codigo = await sock.requestPairingCode(NUMERO_DO_ROBO);
+                console.log(`📡 Solicitando código para o número brasileiro: ${numeroLimpo}...`);
+                let codigo = await sock.requestPairingCode(numeroLimpo);
                 console.log('🔑 CÓDIGO DE CONEXÃO GERADO: ' + codigo);
-                console.log('👉 No seu WhatsApp, vá em: Aparelhos Conectados > Conectar com número de telefone e digite o código acima.');
+                console.log('👉 No seu WhatsApp, vá em: Aparelhos Conectados > Conectar com número de telefone.');
             } catch (err) {
-                console.log('❌ Erro ao gerar código de pareamento: ', err);
+                console.log('❌ Erro detectado na geração. Detalhes:');
+                console.log(err);
             }
-        }, 5000);
+        }, 6000);
     }
 
     sock.ev.on('connection.update', (update) => {
@@ -42,7 +44,7 @@ async function conectarWhatsApp() {
     });
 
     sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
+        const msg = m.messages;
         if (!msg.message || msg.key.fromMe) return;
 
         const de = msg.key.remoteJid;
